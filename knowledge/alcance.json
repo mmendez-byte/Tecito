@@ -1,0 +1,31 @@
+{
+  "_nota": "LISTA PROVISORIA. Gómez la reemplaza con el alcance acreditado por INACAL validado con Carmen (TES-57). Cada entrada: equipo tal como lo nombra la gente, sinónimos, magnitud y laboratorio. El Worker compara el equipo que declara el visitante contra 'equipo' y 'sinonimos' (sin tildes, minúsculas, coincidencia parcial).",
+  "equipos": [
+    { "equipo": "manómetro", "sinonimos": ["manometro", "manómetros", "medidor de presión", "vacuómetro", "manovacuómetro"], "magnitud": "Presión", "laboratorio": "Presión" },
+    { "equipo": "transmisor de presión", "sinonimos": ["transductor de presión", "sensor de presión"], "magnitud": "Presión", "laboratorio": "Presión" },
+    { "equipo": "termómetro", "sinonimos": ["termometro", "termómetro digital", "termómetro de vástago", "termómetro infrarrojo", "pirómetro"], "magnitud": "Temperatura", "laboratorio": "Temperatura" },
+    { "equipo": "termohigrómetro", "sinonimos": ["termohigrometro", "higrómetro", "medidor de humedad"], "magnitud": "Temperatura y humedad", "laboratorio": "Temperatura" },
+    { "equipo": "datalogger", "sinonimos": ["data logger", "registrador de temperatura", "registrador de datos"], "magnitud": "Temperatura y humedad", "laboratorio": "Temperatura" },
+    { "equipo": "termocupla", "sinonimos": ["termopar", "pt100", "rtd", "sensor de temperatura"], "magnitud": "Temperatura", "laboratorio": "Temperatura" },
+    { "equipo": "horno", "sinonimos": ["estufa", "incubadora", "baño termostático", "cámara climática", "refrigeradora", "congeladora", "autoclave"], "magnitud": "Temperatura", "laboratorio": "Temperatura" },
+    { "equipo": "balanza", "sinonimos": ["báscula", "bascula", "balanza analítica", "balanza de precisión"], "magnitud": "Masa", "laboratorio": "Masa" },
+    { "equipo": "pesa", "sinonimos": ["pesas patrón", "masa patrón", "juego de pesas"], "magnitud": "Masa", "laboratorio": "Masa" },
+    { "equipo": "pie de rey", "sinonimos": ["calibrador", "vernier", "calibre"], "magnitud": "Longitud", "laboratorio": "Longitud" },
+    { "equipo": "micrómetro", "sinonimos": ["micrometro", "tornillo micrométrico"], "magnitud": "Longitud", "laboratorio": "Longitud" },
+    { "equipo": "cinta métrica", "sinonimos": ["wincha", "flexómetro", "regla"], "magnitud": "Longitud", "laboratorio": "Longitud" },
+    { "equipo": "multímetro", "sinonimos": ["multimetro", "tester", "multitester"], "magnitud": "Electricidad", "laboratorio": "Electricidad" },
+    { "equipo": "pinza amperimétrica", "sinonimos": ["pinza amperimetrica", "amperímetro de pinza"], "magnitud": "Electricidad", "laboratorio": "Electricidad" },
+    { "equipo": "medidor de aislamiento", "sinonimos": ["megóhmetro", "megohmetro", "megger"], "magnitud": "Electricidad", "laboratorio": "Electricidad" },
+    { "equipo": "telurómetro", "sinonimos": ["telurometro", "medidor de puesta a tierra"], "magnitud": "Electricidad", "laboratorio": "Electricidad" },
+    { "equipo": "torquímetro", "sinonimos": ["torquimetro", "llave de torque", "llave dinamométrica"], "magnitud": "Par torsional", "laboratorio": "Fuerza" },
+    { "equipo": "dinamómetro", "sinonimos": ["dinamometro", "celda de carga", "máquina de ensayo"], "magnitud": "Fuerza", "laboratorio": "Fuerza" },
+    { "equipo": "probeta", "sinonimos": ["pipeta", "bureta", "matraz", "material volumétrico", "micropipeta"], "magnitud": "Volumen", "laboratorio": "Volumen" },
+    { "equipo": "medidor de caudal", "sinonimos": ["caudalímetro", "flujómetro", "rotámetro"], "magnitud": "Caudal", "laboratorio": "Volumen" },
+    { "equipo": "pHmetro", "sinonimos": ["phmetro", "medidor de ph", "conductímetro"], "magnitud": "Fisicoquímica", "laboratorio": "Fisicoquímica" }
+  ],
+  "fuera_de_alcance": [
+    { "patron": "ensayo|análisis|analisis|muestra|laboratorio clínico|microbiolog", "motivo": "NO ES CALIBRACIÓN", "respuesta": "Test & Control hace calibración de equipos de medición, no ensayos ni análisis de muestras." },
+    { "patron": "certificaci[oó]n (iso|de personas|de sistemas)|auditor[ií]a", "motivo": "NO ES CALIBRACIÓN", "respuesta": "No certificamos sistemas ni personas; calibramos equipos bajo acreditación INACAL." },
+    { "patron": "reparaci[oó]n|arreglar|está roto|esta roto|no enciende", "motivo": "EQUIPO INOPERATIVO", "respuesta": "La calibración requiere que el equipo funcione. Si está dañado, primero conviene repararlo." }
+  ]
+}

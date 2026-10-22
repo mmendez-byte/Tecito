@@ -1,0 +1,100 @@
+// Tecito — asistente calificador del sitio de Test & Control.
+// Dos entornos: staging (push a main) y production (tag v*).
+// Los IDs de KV y las colas se crean una sola vez con `npm run setup:staging` / `npm run setup:production`
+// desde GitHub Actions; los IDs quedan acá. Los secretos NUNCA van en este archivo (ver README).
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tecito",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // Importar la base de conocimiento, el widget y la demo como texto
+  "rules": [{ "type": "Text", "globs": ["**/*.md", "**/*.js", "**/*.css", "**/*.html"], "fallthrough": true }],
+
+  // Valores por defecto (los sobreescribe cada env)
+  "vars": {
+    "ENVIRONMENT": "dev",
+    "ALLOWED_ORIGIN": "http://localhost:8787",
+    "WHATSAPP_NUMBER": "51989059994",
+    "MODEL_CHAT": "claude-haiku-5-5",
+    "MODEL_VALIDATE": "claude-sonnet-5-5",
+    "MONTHLY_BUDGET_USD": "15",
+    "DAILY_BUDGET_USD": "2",
+    "MAX_TOKENS_PER_SESSION": "20000",
+    "MAIL_FROM": "tecito@digitalcompi.com",
+    "MAIL_TO": "mmendez@digitalcompi.com",
+    "TURNSTILE_SITEKEY": ""
+  },
+
+  "env": {
+    "staging": {
+      "name": "tecito-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "ALLOWED_ORIGIN": "*",
+        "WHATSAPP_NUMBER": "51989059994",
+        "MODEL_CHAT": "claude-haiku-5-5",
+        "MODEL_VALIDATE": "claude-sonnet-5-5",
+        "MONTHLY_BUDGET_USD": "5",
+        "DAILY_BUDGET_USD": "1",
+        "MAX_TOKENS_PER_SESSION": "20000",
+        "MAIL_FROM": "tecito@digitalcompi.com",
+        "MAIL_TO": "mmendez@digitalcompi.com,mgomez@digitalcompi.com",
+        "TURNSTILE_SITEKEY": "REEMPLAZAR_SITEKEY_STAGING"
+      },
+      "kv_namespaces": [
+        { "binding": "SESSIONS", "id": "REEMPLAZAR_KV_SESSIONS_STAGING" },
+        { "binding": "METRICS", "id": "REEMPLAZAR_KV_METRICS_STAGING" }
+      ],
+      "queues": {
+        "producers": [{ "binding": "LEADS", "queue": "tecito-leads-staging" }],
+        "consumers": [
+          {
+            "queue": "tecito-leads-staging",
+            "max_batch_size": 10,
+            "max_retries": 12,
+            "retry_delay": 900,
+            "dead_letter_queue": "tecito-leads-staging-dlq"
+          }
+        ]
+      },
+      "send_email": [{ "name": "MAIL" }]
+    },
+
+    "production": {
+      "name": "tecito",
+      "routes": [{ "pattern": "tecito.digitalcompi.com", "custom_domain": true }],
+      "vars": {
+        "ENVIRONMENT": "production",
+        "ALLOWED_ORIGIN": "https://www.testcontrol.com.pe",
+        "WHATSAPP_NUMBER": "51989059994",
+        "MODEL_CHAT": "claude-haiku-5-5",
+        "MODEL_VALIDATE": "claude-sonnet-5-5",
+        "MONTHLY_BUDGET_USD": "15",
+        "DAILY_BUDGET_USD": "2",
+        "MAX_TOKENS_PER_SESSION": "20000",
+        "MAIL_FROM": "tecito@digitalcompi.com",
+        "MAIL_TO": "informes8@testcontrol.com.pe,gcomercial@testcontrol.com.pe,mmendez@digitalcompi.com,mgomez@digitalcompi.com",
+        "TURNSTILE_SITEKEY": "REEMPLAZAR_SITEKEY_PRODUCTION"
+      },
+      "kv_namespaces": [
+        { "binding": "SESSIONS", "id": "REEMPLAZAR_KV_SESSIONS_PRODUCTION" },
+        { "binding": "METRICS", "id": "REEMPLAZAR_KV_METRICS_PRODUCTION" }
+      ],
+      "queues": {
+        "producers": [{ "binding": "LEADS", "queue": "tecito-leads" }],
+        "consumers": [
+          {
+            "queue": "tecito-leads",
+            "max_batch_size": 10,
+            "max_retries": 12,
+            "retry_delay": 900,
+            "dead_letter_queue": "tecito-leads-dlq"
+          }
+        ]
+      },
+      "send_email": [{ "name": "MAIL" }]
+    }
+  }
+}

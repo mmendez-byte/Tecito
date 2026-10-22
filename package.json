@@ -1,0 +1,35 @@
+{
+  "name": "tecito",
+  "version": "0.1.0",
+  "description": "Tecito — asistente calificador del sitio de Test & Control (Cloudflare Worker + Claude API)",
+  "scripts": {
+    "dev": "wrangler dev --env staging",
+    "typecheck": "wrangler types && tsc -p tsconfig.json",
+    "test": "vitest run",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "setup:staging": "bash scripts/setup-env.sh staging",
+    "setup:production": "bash scripts/setup-env.sh production",
+    "killswitch:on": "wrangler kv key put killswitch 1 --binding METRICS --env production --remote",
+    "killswitch:off": "wrangler kv key delete killswitch --binding METRICS --env production --remote"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mmendez-byte/tecito.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mmendez-byte/tecito/issues"
+  },
+  "homepage": "https://github.com/mmendez-byte/tecito#readme",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261022.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.152.0"
+  },
+  "private": true,
+  "type": "module"
+}

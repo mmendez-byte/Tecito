@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo — Tecito</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1c2430; background: #fff; }
+    header { background: #0b3c6e; color: #fff; padding: 40px 24px; }
+    header h1 { margin: 0 0 8px; font-size: 28px; }
+    main { max-width: 820px; margin: 0 auto; padding: 32px 24px 160px; line-height: 1.6; }
+    .nota { background: #f4f6f9; border-left: 4px solid #0b3c6e; padding: 12px 16px; margin: 24px 0; }
+    code { background: #f4f6f9; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Test &amp; Control — página de demostración</h1>
+    <div>Simula una página del sitio para probar el widget de Tecito. Abrí la burbuja abajo a la derecha.</div>
+  </header>
+  <main>
+    <p>Esta página existe solo para mostrarle el widget a Carmen y para que Gómez pruebe en staging antes de pegar el script en Elementor. El contenido de abajo es relleno.</p>
+    <div class="nota">
+      Para probar el contexto por línea, abrí esta misma página con <code>?linea=electrica</code>, <code>?linea=presion</code> o <code>?linea=temperatura</code>.
+      Para simular una campaña, agregá <code>&amp;gclid=TEST123&amp;utm_campaign=prueba</code>.
+    </div>
+    <h2>Calibración de equipos de medición</h2>
+    <p>Laboratorio acreditado por INACAL bajo la Norma NTP-ISO/IEC 17025:2017. Servicios en laboratorio y en planta.</p>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Donec id elit non mi porta gravida at eget metus.</p>
+    <p>Maecenas sed diam eget risus varius blandit sit amet non magna. Cras mattis consectetur purus sit amet fermentum.</p>
+  </main>
+
+  <!-- Esto es lo único que va en Elementor. La URL cambia según el entorno. -->
+  <script src="./widget.js" defer></script>
+</body>
+</html>

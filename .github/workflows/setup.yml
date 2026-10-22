@@ -1,0 +1,26 @@
+# Crea KV y colas de un entorno. Se corre a mano, una sola vez por entorno.
+# Después hay que pegar los IDs que imprime en wrangler.jsonc y commitear.
+name: Setup Cloudflare resources
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Entorno"
+        required: true
+        default: staging
+        type: choice
+        options: [staging, production]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: bash scripts/setup-env.sh "${{ github.event.inputs.environment }}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
