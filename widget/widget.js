@@ -8,6 +8,10 @@
   const BASE = "__TECITO_BASE__";
   const TURNSTILE_SITEKEY = "__TECITO_TURNSTILE_SITEKEY__";
   const STORAGE_KEY = "tecito.session";
+  const ENTRADA_KEY = "tecito.entrada";
+  const ENTRADA_TTL = 30 * 24 * 3600e3; // 30 días: un clic de anuncio cuenta si vuelve dentro de ese plazo
+  const PARAMS_CAMPANIA = ["gclid", "gbraid", "wbraid", "msclkid", "fbclid", "li_fat_id", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
+  const MAX_HISTORIAL = 60;
   const AVATAR = BASE + "/avatar.svg"; // reemplazar por el personaje Tecito cuando esté el SVG
 
   const SHORTCUTS = [
@@ -27,8 +31,37 @@
 
   // ---------- Estado ----------
   let state = { token: null, sessionId: null, enabled: true, whatsapp: null, linea: "" };
+  let sessionExp = 0;
+  let historial = []; // lo que se ve en la ventana, para seguir la conversación en otra página del sitio
   let busy = false;
   let started = false;
+
+  // ---------- Entrada al sitio ----------
+  // Se guarda al cargar cualquier página, antes de abrir el chat: el gclid y los utm vienen solo en la
+  // primera URL, y el visitante puede navegar varias páginas antes de escribir. Gana la última entrada
+  // que no fue directa (anuncio, buscador u otro sitio); la navegación interna no la pisa.
+  const entrada = guardarEntrada();
+
+  function guardarEntrada() {
+    const actual = { url: location.href, referrer: document.referrer, ts: Date.now() };
+    try {
+      const params = new URLSearchParams(location.search);
+      const conCampania = PARAMS_CAMPANIA.some((k) => params.has(k));
+      let externo = false;
+      try { externo = !!document.referrer && sinWww(new URL(document.referrer).hostname) !== sinWww(location.hostname); } catch (_) {}
+      const previa = safeJson(localStorage.getItem(ENTRADA_KEY));
+      const vigente = previa && previa.ts > Date.now() - ENTRADA_TTL;
+      if (conCampania || externo || !vigente) {
+        const nueva = { url: location.href, referrer: externo ? document.referrer : "", ts: Date.now() };
+        localStorage.setItem(ENTRADA_KEY, JSON.stringify(nueva));
+        return nueva;
+      }
+      return previa;
+    } catch (_) {
+      return actual;
+    }
+  }
+  function sinWww(h) { return h.replace(/^www\./, ""); }
 
   // ---------- CSS ----------
   const link = document.createElement("link");
@@ -84,7 +117,7 @@
     if (!started) {
       started = true;
       await ensureSession();
-      renderIntro();
+      if (historial.length) renderHistorial(); else renderIntro();
     }
     textarea.focus();
   }
@@ -92,19 +125,30 @@
 
   async function ensureSession() {
     const saved = safeJson(localStorage.getItem(STORAGE_KEY));
-    if (saved && saved.token && saved.exp > Date.now()) { state = saved.state; return; }
+    if (saved && saved.token && saved.exp > Date.now()) {
+      state = saved.state; sessionExp = saved.exp; historial = Array.isArray(saved.historial) ? saved.historial : [];
+      return;
+    }
 
     const turnstile = await getTurnstileToken();
     const res = await fetch(BASE + "/session", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url: location.href, referrer: document.referrer, turnstile }),
+      body: JSON.stringify({ url: entrada.url, referrer: entrada.referrer, pagina: location.href, turnstile }),
     });
     if (!res.ok) { state.enabled = false; return; }
     const data = await res.json();
     state = { token: data.token, sessionId: data.sessionId, enabled: data.enabled, whatsapp: data.whatsapp, linea: data.linea || "" };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ token: data.token, exp: Date.now() + 5 * 3600e3, state })); } catch (_) {}
+    sessionExp = Date.now() + 5 * 3600e3;
+    historial = [];
+    guardarSesion();
   }
+
+  function guardarSesion() {
+    if (historial.length > MAX_HISTORIAL) historial = historial.slice(-MAX_HISTORIAL);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ token: state.token, exp: sessionExp, state, historial })); } catch (_) {}
+  }
+  function recordar(item) { historial.push(item); guardarSesion(); }
 
   function getTurnstileToken() {
     if (!TURNSTILE_SITEKEY || TURNSTILE_SITEKEY.startsWith("__")) return Promise.resolve("");
@@ -143,6 +187,13 @@
     body.appendChild(intro);
   }
 
+  function renderHistorial() {
+    historial.forEach((h) => {
+      if (h.handoff) renderHandoff(h.handoff, true);
+      else addMsg(h.role, h.text);
+    });
+  }
+
   function addMsg(role, text) {
     const d = document.createElement("div");
     d.className = "tc-msg " + (role === "user" ? "tc-user" : "tc-bot");
@@ -162,7 +213,7 @@
     return a;
   }
 
-  function renderHandoff(data) {
+  function renderHandoff(data, restaurado) {
     const box = document.createElement("div");
     box.className = "tc-handoff";
     box.innerHTML = `<div class="tc-handoff-title">Te paso con Jackeline</div>`;
@@ -171,7 +222,7 @@
     }
     box.appendChild(waButton(data.whatsapp, data.text));
     body.appendChild(box); scroll();
-    if (window.gtag && data.lead) window.gtag("event", "tecito_lead_calificado");
+    if (!restaurado && window.gtag && data.lead) window.gtag("event", "tecito_lead_calificado");
   }
 
   function scroll() { body.scrollTop = body.scrollHeight; }
@@ -189,16 +240,19 @@
     if (busy || !state.token) return;
     busy = true; sendBtn.disabled = true;
     addMsg("user", text);
+    recordar({ role: "user", text });
     const typing = document.createElement("div"); typing.className = "tc-typing"; typing.textContent = "Tecito está escribiendo…"; body.appendChild(typing); scroll();
 
     let bot = null;
+    // Guarda el texto de Tecito antes de lo que venga después (el handoff), para restaurarlo en el mismo orden.
+    const cerrarBot = () => { if (bot && bot.textContent) recordar({ role: "bot", text: bot.textContent }); bot = null; };
     try {
       const res = await fetch(BASE + "/message", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ token: state.token, text }),
       });
-      if (res.status === 401 || res.status === 410) { localStorage.removeItem(STORAGE_KEY); started = false; typing.remove(); addMsg("bot", "La sesión venció. Vuelve a abrir el asistente."); return; }
+      if (res.status === 401 || res.status === 410) { localStorage.removeItem(STORAGE_KEY); historial = []; started = false; typing.remove(); addMsg("bot", "La sesión venció. Vuelve a abrir el asistente."); return; }
       if (!res.ok || !res.body) throw new Error("http " + res.status);
 
       const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
@@ -212,7 +266,7 @@
           const data = safeJson((chunk.match(/^data: (.*)$/m) || [])[1]);
           if (!ev || !data) continue;
           if (ev === "text") { typing.remove(); if (!bot) bot = addMsg("bot", ""); bot.textContent += data.delta; scroll(); }
-          else if (ev === "handoff") { typing.remove(); renderHandoff(data); }
+          else if (ev === "handoff") { typing.remove(); cerrarBot(); renderHandoff(data); recordar({ handoff: data }); }
           else if (ev === "error") { typing.remove(); addMsg("bot", data.message); if (data.whatsapp) body.appendChild(waButton(data.whatsapp, "")); }
         }
       }
@@ -221,6 +275,7 @@
       addMsg("bot", "No pude responder en este momento. Puedes escribirle directo a nuestra asesora comercial.");
       if (state.whatsapp) body.appendChild(waButton(state.whatsapp, ""));
     } finally {
+      cerrarBot();
       busy = false; sendBtn.disabled = false; textarea.focus();
     }
   }

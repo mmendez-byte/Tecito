@@ -1,6 +1,6 @@
 // Tecito — asistente calificador del sitio de Test & Control.
 // Dos entornos: staging (push a main) y production (tag v*).
-// Los IDs de KV y las colas se crean una sola vez con `npm run setup:staging` / `npm run setup:production`
+// Los IDs de KV y D1 y las colas se crean una sola vez con `npm run setup:staging` / `npm run setup:production`
 // desde GitHub Actions; los IDs quedan acá. Los secretos NUNCA van en este archivo (ver README).
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
@@ -10,7 +10,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   // Importar la base de conocimiento, el widget y la demo como texto
-  "rules": [{ "type": "Text", "globs": ["**/*.md", "**/*.js", "**/*.css", "**/*.html"], "fallthrough": true }],
+  "rules": [{ "type": "Text", "globs": ["**/*.md", "**/widget/*.js", "**/widget/*.css", "**/widget/*.html"], "fallthrough": true }],
 
   // Valores por defecto (los sobreescribe cada env)
   "vars": {
@@ -47,6 +47,11 @@
         { "binding": "SESSIONS", "id": "REEMPLAZAR_KV_SESSIONS_STAGING" },
         { "binding": "METRICS", "id": "REEMPLAZAR_KV_METRICS_STAGING" }
       ],
+      "d1_databases": [
+        { "binding": "DB", "database_name": "tecito-staging", "database_id": "REEMPLAZAR_D1_STAGING", "migrations_dir": "migrations" }
+      ],
+      // Cotejo diario y informe semanal; las mismas cadenas que CRON_COTEJO y CRON_INFORME en src/crons.ts (hay un test que lo verifica).
+      "triggers": { "crons": ["30 12 * * *", "0 13 * * 1"] },
       "queues": {
         "producers": [{ "binding": "LEADS", "queue": "tecito-leads-staging" }],
         "consumers": [
@@ -67,7 +72,8 @@
       "routes": [{ "pattern": "tecito.digitalcompi.com", "custom_domain": true }],
       "vars": {
         "ENVIRONMENT": "production",
-        "ALLOWED_ORIGIN": "https://www.testcontrol.com.pe",
+        // www.testcontrol.com.pe redirige (301) a testcontrol.com.pe: el Origin real es sin www.
+        "ALLOWED_ORIGIN": "https://testcontrol.com.pe,https://www.testcontrol.com.pe",
         "WHATSAPP_NUMBER": "51989059994",
         "MODEL_CHAT": "claude-haiku-5-5",
         "MODEL_VALIDATE": "claude-sonnet-5-5",
@@ -82,6 +88,10 @@
         { "binding": "SESSIONS", "id": "REEMPLAZAR_KV_SESSIONS_PRODUCTION" },
         { "binding": "METRICS", "id": "REEMPLAZAR_KV_METRICS_PRODUCTION" }
       ],
+      "d1_databases": [
+        { "binding": "DB", "database_name": "tecito", "database_id": "REEMPLAZAR_D1_PRODUCTION", "migrations_dir": "migrations" }
+      ],
+      "triggers": { "crons": ["30 12 * * *", "0 13 * * 1"] },
       "queues": {
         "producers": [{ "binding": "LEADS", "queue": "tecito-leads" }],
         "consumers": [

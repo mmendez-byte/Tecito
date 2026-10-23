@@ -1,36 +1,59 @@
 import { enviarAlerta, enviarAvisoLead } from "./mail";
+import { entregaHecha, marcarEntrega } from "./registro";
 import type { Env, LeadMessage } from "./types";
 
 /**
  * Consumidor de la cola de leads. Por cada lead que califica:
- *  1. escribe la fila en la planilla de Jackeline (Apps Script, TES-58)
- *  2. manda el mail de aviso (TES-59)
+ *  1. manda el mail de aviso (TES-59): va primero porque es lo que hace que el equipo comercial
+ *     tome la consulta en el momento, aunque la planilla esté caída
+ *  2. escribe la fila en la planilla de Jackeline (Apps Script, TES-58)
  * La fila de conversión para Ads la agrega el propio Apps Script cuando hay GCLID.
  *
- * Si algo falla, el mensaje se reintenta (max_retries y retry_delay en wrangler.jsonc:
- * 12 intentos cada 15 min ≈ 3 h; si se agota, va a la dead letter queue y se avisa).
+ * Cada paso se marca en D1 al terminar, así un reintento hace solo lo que faltó: no duplica el mail
+ * si falló la planilla ni la fila si falló el mail. Si algo falla, el mensaje se reintenta
+ * (max_retries y retry_delay en wrangler.jsonc: 12 intentos cada 15 min ≈ 3 h; si se agota,
+ * va a la dead letter queue y se avisa).
  */
 export async function consumirLeads(batch: MessageBatch<LeadMessage>, env: Env): Promise<void> {
   for (const m of batch.messages) {
-    try {
-      await escribirPlanilla(env, m.body);
-      await enviarAvisoLead(env, m.body);
-      m.ack();
-    } catch (e) {
-      console.error("lead falló, se reintenta", m.body.sessionId, e);
-      if (m.attempts >= 12) {
-        await enviarAlerta(env, "Lead sin registrar tras 12 intentos", `${(e as Error).message}\n\n${JSON.stringify(m.body, null, 2)}`).catch(() => {});
+    const id = m.body.sessionId;
+    const hecho = await entregaHecha(env, id);
+    const errores: string[] = [];
+
+    if (!hecho.mail) {
+      try {
+        await enviarAvisoLead(env, m.body);
+        await marcarEntrega(env, id, "mail");
+      } catch (e) {
+        errores.push(`mail: ${(e as Error).message}`);
       }
-      m.retry();
     }
+    if (!hecho.planilla) {
+      try {
+        if (await escribirPlanilla(env, m.body)) await marcarEntrega(env, id, "planilla");
+      } catch (e) {
+        errores.push(`planilla: ${(e as Error).message}`);
+      }
+    }
+
+    if (!errores.length) {
+      m.ack();
+      continue;
+    }
+    console.error("lead falló, se reintenta", id, errores);
+    if (m.attempts >= 12) {
+      await enviarAlerta(env, "Lead sin registrar tras 12 intentos", `${errores.join("\n")}\n\n${JSON.stringify(m.body, null, 2)}`).catch(() => {});
+    }
+    m.retry();
   }
 }
 
-async function escribirPlanilla(env: Env, msg: LeadMessage): Promise<void> {
+/** Devuelve true si escribió la fila; false si no hay planilla configurada (fuera de producción). */
+async function escribirPlanilla(env: Env, msg: LeadMessage): Promise<boolean> {
   if (!env.SHEETS_ENDPOINT_URL) {
     if (env.ENVIRONMENT === "production") throw new Error("SHEETS_ENDPOINT_URL no configurado");
     console.warn("SHEETS_ENDPOINT_URL no configurado; se omite la planilla en", env.ENVIRONMENT);
-    return;
+    return false;
   }
   const l = msg.lead;
   // Apps Script no expone headers HTTP en doPost, así que el token va como parámetro de la URL.
@@ -67,4 +90,5 @@ async function escribirPlanilla(env: Env, msg: LeadMessage): Promise<void> {
   if (!res.ok || (data.status && data.status >= 400)) {
     throw new Error(`Apps Script ${data.status ?? res.status}: ${data.error ?? texto.slice(0, 200)}`);
   }
+  return true;
 }
