@@ -2,8 +2,8 @@ import conocimiento from "../knowledge/tecito-conocimiento.md";
 import { alcanceComoTexto } from "./alcance";
 import type { ChatMessage, Env, Lead, Origen } from "./types";
 
-const API = "https://api.anthropic.com/v1/messages";
-const VERSION = "2023-06-01";
+export const API = "https://api.anthropic.com/v1/messages";
+export const VERSION = "2023-06-01";
 
 // ---------- System prompt (cacheado) ----------
 
@@ -37,7 +37,13 @@ ${conocimiento}
 function contextoDeOrigen(o: Origen): string {
   const partes: string[] = [];
   if (o.linea) partes.push(`El visitante entró por la línea "${o.linea}": arrancá hablando de los equipos de esa línea en lugar de preguntar qué equipo tiene.`);
-  if (o.canal === "campaña") partes.push("Llegó desde un anuncio de Google buscando calibración: probablemente tiene una necesidad concreta.");
+  if (o.canal === "campaña") {
+    const donde = o.plataforma === "google" ? "un anuncio de Google" : "un anuncio";
+    partes.push(`Llegó desde ${donde} buscando calibración: probablemente tiene una necesidad concreta.`);
+    // utm_term llega con el {keyword} de Google Ads si la URL final lo tiene configurado.
+    const termino = (o.utm_term ?? "").replace(/[{}"<>\n]/g, " ").trim().slice(0, 80);
+    if (termino && !/^keyword$/i.test(termino)) partes.push(`Buscó: «${termino}». Usalo para entender qué necesita, sin repetírselo.`);
+  }
   if (o.canal === "blog") partes.push("Llegó desde un artículo del blog: puede estar informándose; no apures la calificación.");
   return partes.join("\n");
 }

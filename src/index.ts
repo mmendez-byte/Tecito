@@ -3,11 +3,14 @@ import widgetCss from "../widget/widget.css";
 import widgetJs from "../widget/widget.js";
 import { aplicarAlcance } from "./alcance";
 import { chat, validarLead } from "./claude";
+import { CRON_INFORME } from "./crons";
 import { checkBudget, estimateCost, guardMessage, recordSpend } from "./guard";
 import { encolarLead, linkWhatsapp, textoWhatsapp } from "./lead";
+import { informeSemanal } from "./insights";
 import { enviarAlerta } from "./mail";
 import { consumirLeads } from "./queue";
-import { createSession, loadSession, parseOrigen, recordSessionSummary, saveSession, signSession, verifySession } from "./session";
+import { cotejar, registrarConversacion } from "./registro";
+import { createSession, loadSession, parseOrigen, saveSession, signSession, verifySession } from "./session";
 import { verifyTurnstile } from "./turnstile";
 import type { Env, LeadMessage } from "./types";
 
@@ -49,12 +52,22 @@ export default {
   async queue(batch: MessageBatch<LeadMessage>, env: Env): Promise<void> {
     await consumirLeads(batch, env);
   },
+
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    const tarea = controller.cron === CRON_INFORME ? informeSemanal(env) : cotejar(env);
+    ctx.waitUntil(
+      tarea.then(
+        () => undefined,
+        (e) => enviarAlerta(env, `Falló la tarea programada ${controller.cron}`, String(e)).catch(() => {}),
+      ),
+    );
+  },
 } satisfies ExportedHandler<Env, LeadMessage>;
 
 // ---------- /session ----------
 
 async function handleSession(request: Request, env: Env, cors: Headers): Promise<Response> {
-  const body = (await request.json().catch(() => ({}))) as { url?: string; referrer?: string; turnstile?: string };
+  const body = (await request.json().catch(() => ({}))) as { url?: string; referrer?: string; pagina?: string; turnstile?: string };
   const ip = request.headers.get("cf-connecting-ip") ?? "";
 
   if (!(await verifyTurnstile(env, body.turnstile, ip))) {
@@ -145,6 +158,7 @@ async function handleMessage(request: Request, env: Env, ctx: ExecutionContext, 
 
           if (lead.calificacion === "CALIFICA") {
             await encolarLead(env, session, lead, session.origen);
+            session.leadEncolado = new Date().toISOString();
             await send("handoff", { whatsapp: linkWhatsapp(env, lead), text: textoWhatsapp(lead), lead: publicLead(lead) });
           } else {
             await send("closed", { calificacion: lead.calificacion, motivo: lead.motivo });
@@ -152,12 +166,14 @@ async function handleMessage(request: Request, env: Env, ctx: ExecutionContext, 
         }
 
         session.costUsd += cost;
-        await Promise.all([saveSession(env, session), recordSpend(env, cost), recordSessionSummary(env, session)]);
+        await Promise.all([saveSession(env, session), recordSpend(env, cost), registrarConversacion(env, session)]);
         await send("done", { reason: "ok" });
       } catch (e) {
         console.error("chat falló", e);
         await send("error", { message: "No pude responder en este momento. Podés escribirle directo a Jackeline por WhatsApp.", whatsapp: `https://wa.me/${env.WHATSAPP_NUMBER}` });
         await enviarAlerta(env, "Fallo en /message", String(e)).catch(() => {});
+        // Queda registrada igual: si ya tenía ficha y no llegó a la cola, el cotejo diario la encuentra.
+        await registrarConversacion(env, session);
       } finally {
         await writer.close().catch(() => {});
       }
@@ -176,7 +192,7 @@ async function handleWhatsappClick(request: Request, env: Env, ctx: ExecutionCon
   const session = await loadSession(env, sessionId);
   if (session) {
     session.whatsappClicked = true;
-    ctx.waitUntil(Promise.all([saveSession(env, session), recordSessionSummary(env, session)]));
+    ctx.waitUntil(Promise.all([saveSession(env, session), registrarConversacion(env, session)]));
   }
   return json({ ok: true }, cors);
 }

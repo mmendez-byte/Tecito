@@ -4,6 +4,7 @@ export interface Env {
   METRICS: KVNamespace;
   LEADS: Queue<LeadMessage>;
   MAIL: SendEmail;
+  DB: D1Database;
 
   // Vars (wrangler.jsonc)
   ENVIRONMENT: "dev" | "staging" | "production";
@@ -40,14 +41,20 @@ export type MotivoPerdida =
   | "";
 
 export interface Origen {
+  /** URL por la que entró al sitio (con gclid y utm), aunque haya abierto el chat en otra página. */
   url: string;
   referrer: string;
+  /** Página donde abrió el chat. */
+  pagina: string;
   gclid: string;
   utm_source: string;
   utm_medium: string;
   utm_campaign: string;
+  utm_term: string;
+  utm_content: string;
   linea: string;
   canal: "campaña" | "orgánico" | "directo" | "blog" | "otro";
+  plataforma: "google" | "meta" | "microsoft" | "linkedin" | "";
 }
 
 export interface ChatMessage {
@@ -63,6 +70,8 @@ export interface Session {
   tokensUsed: number;
   costUsd: number;
   lead?: Lead;
+  /** Cuándo se encoló el lead para mail y planilla; el cotejo diario lo busca. */
+  leadEncolado?: string;
   whatsappClicked?: boolean;
 }
 
