@@ -156,7 +156,7 @@ async function handleMessage(request: Request, env: Env, ctx: ExecutionContext, 
         await send("done", { reason: "ok" });
       } catch (e) {
         console.error("chat falló", e);
-        await send("error", { message: "No pude responder en este momento. Podés escribirle directo a Jackeline por WhatsApp.", whatsapp: `https://wa.me/${env.WHATSAPP_NUMBER}` });
+        await send("error", { message: "No pude responder en este momento. Puede escribirle directamente a Jackeline por WhatsApp.", whatsapp: `https://wa.me/${env.WHATSAPP_NUMBER}` });
         await enviarAlerta(env, "Fallo en /message", String(e)).catch(() => {});
       } finally {
         await writer.close().catch(() => {});

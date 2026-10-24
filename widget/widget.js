@@ -42,7 +42,7 @@
   root.innerHTML = `
     <button class="tc-bubble" type="button" aria-label="Abrir el asistente de Test & Control">
       ${avatar()}
-      <span class="tc-bubble-label">¿Te ayudo a calibrar?</span>
+      <span class="tc-bubble-label">¿Le ayudamos con una calibración?</span>
     </button>
     <div class="tc-window" role="dialog" aria-label="Tecito, asistente de Test & Control" aria-modal="true">
       <div class="tc-header">
@@ -56,7 +56,7 @@
       <div class="tc-body"></div>
       <div class="tc-turnstile" hidden></div>
       <form class="tc-input">
-        <textarea rows="1" placeholder="Escribe tu consulta…" aria-label="Tu mensaje" maxlength="2000"></textarea>
+        <textarea rows="1" placeholder="Escriba su consulta…" aria-label="Su mensaje" maxlength="2000"></textarea>
         <button class="tc-send" type="submit">Enviar</button>
       </form>
       <div class="tc-footer">Calibración acreditada · Lima, Perú</div>
@@ -126,10 +126,10 @@
   function renderIntro() {
     const intro = document.createElement("div");
     intro.className = "tc-intro";
-    const lineaTxt = LINEAS[state.linea] ? ` Veo que llegaste por ${LINEAS[state.linea]}.` : "";
-    intro.innerHTML = `<p>Hola, soy Tecito.${lineaTxt} Puedo ayudarte a saber si calibramos tu equipo y pasarte con nuestra asesora comercial. ¿Qué necesitas?</p>`;
+    const lineaTxt = LINEAS[state.linea] ? ` Veo que le interesan ${LINEAS[state.linea]}.` : "";
+    intro.innerHTML = `<p>Hola, soy Tecito.${lineaTxt} Puedo ayudarle a saber si calibramos su equipo y comunicarle con nuestra asesora comercial. ¿Qué necesita?</p>`;
     if (!state.enabled) {
-      intro.innerHTML = `<p>En este momento el asistente no está disponible. Puedes escribirle directo a nuestra asesora comercial.</p>`;
+      intro.innerHTML = `<p>En este momento el asistente no está disponible. Puede escribirle directamente a nuestra asesora comercial.</p>`;
       intro.appendChild(waButton(state.whatsapp, ""));
       form.hidden = true;
     } else {
@@ -165,7 +165,7 @@
   function renderHandoff(data) {
     const box = document.createElement("div");
     box.className = "tc-handoff";
-    box.innerHTML = `<div class="tc-handoff-title">Te paso con Jackeline</div>`;
+    box.innerHTML = `<div class="tc-handoff-title">Le comunico con Jackeline</div>`;
     if (data.text) {
       const t = document.createElement("div"); t.className = "tc-handoff-text"; t.textContent = data.text; box.appendChild(t);
     }
@@ -198,7 +198,7 @@
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ token: state.token, text }),
       });
-      if (res.status === 401 || res.status === 410) { localStorage.removeItem(STORAGE_KEY); started = false; typing.remove(); addMsg("bot", "La sesión venció. Vuelve a abrir el asistente."); return; }
+      if (res.status === 401 || res.status === 410) { localStorage.removeItem(STORAGE_KEY); started = false; typing.remove(); addMsg("bot", "La sesión venció. Vuelva a abrir el asistente."); return; }
       if (!res.ok || !res.body) throw new Error("http " + res.status);
 
       const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
@@ -218,7 +218,7 @@
       }
     } catch (e) {
       typing.remove();
-      addMsg("bot", "No pude responder en este momento. Puedes escribirle directo a nuestra asesora comercial.");
+      addMsg("bot", "No pude responder en este momento. Puede escribirle directamente a nuestra asesora comercial.");
       if (state.whatsapp) body.appendChild(waButton(state.whatsapp, ""));
     } finally {
       busy = false; sendBtn.disabled = false; textarea.focus();

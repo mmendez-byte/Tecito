@@ -15,29 +15,29 @@ export type GuardResult =
   | { ok: true }
   | { ok: false; reason: "empty" | "repeated" | "language" | "injection" | "session_cap" | "budget" | "killswitch"; message: string };
 
-const DERIVAR = "Para seguir con tu consulta te paso con Jackeline, nuestra asesora comercial. Tocá el botón de WhatsApp.";
+const DERIVAR = "Para continuar con su consulta, le comunico con Jackeline, nuestra asesora comercial. Toque el botón de WhatsApp.";
 
 export async function guardMessage(env: Env, session: Session, text: string): Promise<GuardResult> {
   const clean = text.trim();
 
   if (!clean || clean.length < 2) {
-    return { ok: false, reason: "empty", message: "Contame qué equipo necesitás calibrar y en qué ciudad estás." };
+    return { ok: false, reason: "empty", message: "Cuénteme qué equipo necesita calibrar y en qué ciudad se encuentra." };
   }
   if (clean.length > 2000) {
-    return { ok: false, reason: "empty", message: "El mensaje es muy largo. ¿Podés resumirlo en un par de líneas?" };
+    return { ok: false, reason: "empty", message: "El mensaje es muy largo. ¿Puede resumirlo en un par de líneas?" };
   }
 
   const last = [...session.messages].reverse().find((m) => m.role === "user");
   if (last && last.content.trim() === clean) {
-    return { ok: false, reason: "repeated", message: "Ese mensaje ya me lo mandaste. ¿Querés agregar algo más?" };
+    return { ok: false, reason: "repeated", message: "Ya recibí ese mensaje. ¿Desea agregar algo más?" };
   }
 
   if (looksLikeInjection(clean)) {
-    return { ok: false, reason: "injection", message: "Soy Tecito, el asistente de Test & Control. Puedo ayudarte con calibración de equipos. ¿Qué necesitás?" };
+    return { ok: false, reason: "injection", message: "Soy Tecito, el asistente de Test & Control. Puedo ayudarle con la calibración de sus equipos. ¿Qué necesita?" };
   }
 
   if (!looksSpanish(clean)) {
-    return { ok: false, reason: "language", message: "Por ahora atiendo en español. ¿Me contás en español qué equipo necesitás calibrar?" };
+    return { ok: false, reason: "language", message: "Por ahora solo atiendo en español. ¿Me indica en español qué equipo necesita calibrar?" };
   }
 
   if (session.tokensUsed > Number(env.MAX_TOKENS_PER_SESSION)) {
